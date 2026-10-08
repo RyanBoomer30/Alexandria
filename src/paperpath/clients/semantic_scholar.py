@@ -76,7 +76,10 @@ def candidate_from_s2(item: dict) -> Candidate | None:
     arxiv_id = external.get("ArXiv")
     doi = external.get("DOI")
     s2_id = cited.get("paperId")
-    canonical = canonical_work_id(arxiv_id=arxiv_id, doi=doi, s2_id=s2_id)
+    try:
+        canonical = canonical_work_id(arxiv_id=arxiv_id, doi=doi, s2_id=s2_id)
+    except ValueError:
+        return None
     contexts = []
     intents = list(item.get("intents") or [])
     for text in item.get("contexts") or []:

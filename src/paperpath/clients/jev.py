@@ -59,7 +59,7 @@ class JevClient:
         call_name: str,
     ) -> dict[str, Answer]:
         if not self._api_key:
-            raise ConfigurationError("PAPERPATH_JEV_API_KEY is not set.")
+            raise ConfigurationError("PAPERPATH_OPENROUTER_API_KEY is not set.")
         body = {
             "model": self._model,
             "state": state,
@@ -155,7 +155,7 @@ class JudgmentClient:
                     raise
                 logger.warning("Jev call %s failed; using the frontier model", call_name)
         elif self._settings.jev_fallback != "frontier":
-            raise ConfigurationError("PAPERPATH_JEV_API_KEY is not set and Jev fallback is disabled.")
+            raise ConfigurationError("PAPERPATH_OPENROUTER_API_KEY is not set and Jev fallback is disabled.")
         return await self._decide_with_frontier(questions=questions, state=state, call_name=call_name)
 
     async def _decide_with_frontier(

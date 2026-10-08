@@ -77,3 +77,4 @@ def test_canonical_ids_merge_arxiv_and_doi() -> None:
     assert candidate.canonical_id == "arxiv:1409.0473"
     assert candidate.influential is True
     assert candidate.contexts[0].section.value == "related_work"
+    assert candidate_from_s2({"citedPaper": {"title": "Untitled citation"}}) is None

@@ -40,7 +40,7 @@ class FrontierClient:
 
     async def complete_json(self, *, system: str, user: str, call_name: str) -> dict:
         if not self._api_key:
-            raise ConfigurationError("PAPERPATH_FRONTIER_API_KEY is not set.")
+            raise ConfigurationError("PAPERPATH_OPENROUTER_API_KEY is not set.")
         body = {
             "model": self._model,
             "temperature": 0,

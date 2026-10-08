@@ -3,6 +3,8 @@
 import argparse
 import asyncio
 import logging
+import sys
+import uuid
 
 import uvicorn
 
@@ -13,37 +15,79 @@ from paperpath.domain.ordering import learning_path
 from paperpath.export.vault import build_vault, zip_vault
 from paperpath.pipeline.wiring import build_runtime
 
+_USAGE = """\
+%(prog)s PAPER_LINK [-o FILE]
+       %(prog)s serve [--host HOST] [--port PORT]
+"""
+
+_EPILOG = """\
+examples:
+  python -m paperpath https://arxiv.org/abs/1706.03762
+  python -m paperpath https://arxiv.org/pdf/1706.03762.pdf -o roadmap.zip
+  python -m paperpath serve
+"""
+
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="paperpath", description="Build a learning roadmap for an arXiv paper.")
-    parser.add_argument("--database-url", default=None)
-    sub = parser.add_subparsers(dest="command", required=True)
+    raw = list(sys.argv[1:] if argv is None else argv)
+    parser = _parser()
+    args = parser.parse_args(_prepare_argv(raw))
+    if args.serve and (args.paper or args.output):
+        parser.error("serve does not take a paper link")
+    if not args.serve and not args.paper:
+        parser.error("pass an arXiv link, for example: python -m paperpath https://arxiv.org/abs/1706.03762")
 
-    generate = sub.add_parser("generate", help="Run the pipeline and print the learning order.")
-    generate.add_argument("arxiv")
-
-    export = sub.add_parser("export", help="Write an Obsidian vault zip for a cached or new roadmap.")
-    export.add_argument("arxiv")
-    export.add_argument("-o", "--output", default="roadmap.zip")
-
-    serve = sub.add_parser("serve", help="Run the HTTP API.")
-    serve.add_argument("--host", default="127.0.0.1")
-    serve.add_argument("--port", type=int, default=8000)
-
-    args = parser.parse_args(argv)
     settings = Settings()
     if args.database_url:
         settings = settings.model_copy(update={"database_url": args.database_url})
     logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
-    if args.command == "serve":
+    if args.serve:
         app = create_app(build_runtime(settings))
         uvicorn.run(app, host=args.host, port=args.port)
         return
-    if args.command == "generate":
-        asyncio.run(_generate(settings, args.arxiv))
+    if args.output:
+        asyncio.run(_export(settings, args.paper, args.output))
         return
-    asyncio.run(_export(settings, args.arxiv, args.output))
+    asyncio.run(_generate(settings, args.paper))
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="python -m paperpath",
+        description="Build a learning roadmap for an arXiv paper.",
+        usage=_USAGE,
+        epilog=_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "paper",
+        nargs="?",
+        metavar="PAPER_LINK",
+        help="arXiv URL or id (abs, pdf, html, or a bare id)",
+    )
+    parser.add_argument("-o", "--output", metavar="FILE", help="write an Obsidian vault zip to this path")
+    parser.add_argument("--serve", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--host", default="127.0.0.1", help=argparse.SUPPRESS)
+    parser.add_argument("--port", type=int, default=8000, help=argparse.SUPPRESS)
+    parser.add_argument("--database-url", default=None)
+    return parser
+
+
+def _prepare_argv(argv: list[str]) -> list[str]:
+    """Accept a bare link, and keep the older generate, export, and serve forms."""
+    if not argv or argv[0] in {"-h", "--help"}:
+        return argv
+    if argv[0] == "serve":
+        return ["--serve", *argv[1:]]
+    if argv[0] == "generate":
+        return argv[1:]
+    if argv[0] == "export":
+        rest = argv[1:]
+        if "-o" not in rest and "--output" not in rest:
+            rest = [*rest, "-o", "roadmap.zip"]
+        return rest
+    return argv
 
 
 async def _generate(settings: Settings, raw_id: str) -> None:
@@ -85,8 +129,6 @@ async def _ensure(runtime, raw_id: str) -> str:
             raise SystemExit(f"arXiv did not report a version for {arxiv_id.base}.")
         arxiv_id = arxiv_id.with_version(paper.version)
         runtime.store.upsert_paper(paper)
-    import uuid
-
     roadmap_id = runtime.store.create_roadmap(str(uuid.uuid4()), arxiv_id.canonical)
     job = runtime.store.get_job(roadmap_id)
     if job and job[1] == "ready":

@@ -21,12 +21,12 @@ class Settings(BaseSettings):
     inline_jobs: bool = False
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
 
+    # One OpenRouter key covers chat completions and the Jev Decisions API.
+    openrouter_api_key: str = ""
     frontier_base_url: str = "https://openrouter.ai/api/v1"
-    frontier_api_key: str = ""
     frontier_model: str = "openai/gpt-4.1"
 
     jev_base_url: str = "https://openrouter.ai/api/alpha"
-    jev_api_key: str = ""
     jev_model: str = "typesafe/jev-1.13"
     jev_fallback: Literal["frontier", "none"] = "frontier"
     jev_max_questions: int = 16
@@ -57,8 +57,8 @@ class Settings(BaseSettings):
 
     @property
     def frontier_configured(self) -> bool:
-        return bool(self.frontier_api_key)
+        return bool(self.openrouter_api_key)
 
     @property
     def jev_configured(self) -> bool:
-        return bool(self.jev_api_key)
+        return bool(self.openrouter_api_key)

@@ -130,7 +130,7 @@ async def test_frontier_client_strips_json_fences() -> None:
 
 
 def test_settings_ignore_empty_env(monkeypatch) -> None:
-    monkeypatch.delenv("PAPERPATH_FRONTIER_API_KEY", raising=False)
+    monkeypatch.delenv("PAPERPATH_OPENROUTER_API_KEY", raising=False)
     settings = Settings(_env_file=None)
     assert settings.ancestor_max_depth == 2
     assert settings.jev_model == "typesafe/jev-1.13"

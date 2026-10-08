@@ -70,14 +70,14 @@ def build_clients(settings: Settings, http: httpx.AsyncClient, store: Store) -> 
     frontier = FrontierClient(
         http,
         base_url=settings.frontier_base_url,
-        api_key=settings.frontier_api_key,
+        api_key=settings.openrouter_api_key,
         model=settings.frontier_model,
         recorder=recorder,
     )
     jev = JevClient(
         http,
         base_url=settings.jev_base_url,
-        api_key=settings.jev_api_key,
+        api_key=settings.openrouter_api_key,
         model=settings.jev_model,
         yes_threshold=settings.noul_yes_threshold,
         app_name=settings.app_name,
